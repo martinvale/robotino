@@ -1,5 +1,5 @@
 from flask import Flask, request
-from falsk_sockets import Sockets
+from flask_sockets import Sockets
 
 app = Flask(__name__)
 sockets = Sockets(app)
