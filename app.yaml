@@ -1,1 +1,6 @@
 runtime: python37
+
+entrypoint: gunicorn -b :$PORT -k flask_sockets.worker main:app
+
+manual_scaling:
+  instances: 1
