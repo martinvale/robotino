@@ -26,8 +26,9 @@ def register(robot_id):
     robots[robot_id] = ip
     return 'OK'
 
-@app.route('/control')
+@sockets.route('/control')
 def control(ws):
+	print('Hola')
 	while not ws.closed:
 		message = ws.receive()
 		if message is None:
@@ -35,4 +36,5 @@ def control(ws):
 		print(message)
 
 if __name__ == '__main__':
-    app.run(host='192.168.0.6', port=8080, debug=True)
+    #app.run(host='192.168.0.7', port=8081, debug=True)
+    app.run()
