@@ -37,7 +37,7 @@ def control(ws):
         # extra-instance storage or messaging system would be required.)
         clients = ws.handler.server.clients.values()
         for client in clients:
-            client.ws.send(message)	while not ws.closed:
+            client.ws.send(message)
 
 if __name__ == '__main__':
     print("""
