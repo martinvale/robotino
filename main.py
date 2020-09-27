@@ -28,13 +28,22 @@ def register(robot_id):
 
 @sockets.route('/control')
 def control(ws):
-	print('Hola')
-	while not ws.closed:
-		message = ws.receive()
-		if message is None:
-			continue
-		print(message)
+    while not ws.closed:
+        message = ws.receive()
+        if message is None:  # message is "None" if the client has closed.
+            continue
+        # Send the message to all clients connected to this webserver
+        # process. (To support multiple processes or instances, an
+        # extra-instance storage or messaging system would be required.)
+        clients = ws.handler.server.clients.values()
+        for client in clients:
+            client.ws.send(message)	while not ws.closed:
 
 if __name__ == '__main__':
-    #app.run(host='192.168.0.7', port=8081, debug=True)
-    app.run()
+    print("""
+This can not be run directly because the Flask development server does not
+support web sockets. Instead, use gunicorn:
+
+gunicorn -b 127.0.0.1:8080 -k flask_sockets.worker main:app
+
+""")
