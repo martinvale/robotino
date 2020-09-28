@@ -17,7 +17,7 @@ def test_message(message):
 @socketio.on('connect')
 def connect():
     print('connected!')
-    emit('my response', {'data': 'Connected'})
+    #emit('my response', {'data': 'Connected'})
 
 @socketio.on('disconnect')
 def test_disconnect():
