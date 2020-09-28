@@ -1,5 +1,10 @@
-from flask_socketio import emit
+from flask_socketio import send, emit
 from robotinomanager import socketio
+
+@socketio.on('command request')
+def command_request(message):
+    print('command request: ' + message)
+    emit('my response', {'command': message}, broadcast=True)
 
 @socketio.on('my event')
 def test_message(message):
@@ -10,8 +15,8 @@ def test_message(message):
     emit('my response', {'data': message['data']}, broadcast=True)
 
 @socketio.on('connect')
-def test_connect():
-    print('hola')
+def connect():
+    print('connected!')
     emit('my response', {'data': 'Connected'})
 
 @socketio.on('disconnect')

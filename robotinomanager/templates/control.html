@@ -29,7 +29,7 @@
           });
         },
         send: function(command) {
-          this.ws.send(command);
+          this.ws.emit('command request', command);
         }
       }
 
