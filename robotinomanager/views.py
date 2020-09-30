@@ -36,7 +36,7 @@ def about():
         message='Your application description page.'
     )
 
-@app.route('/control')
+@app.route('/remote')
 def sample():
     """Renders the contact page."""
-    return render_template('control.html')
+    return render_template('remote.html')
