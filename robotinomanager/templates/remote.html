@@ -52,7 +52,7 @@
             ]
           };
 
-          this.socket = io({transports: [“websocket”], upgrade: false}));
+          this.socket = io({transports: [“websocket”], upgrade: false});
           var manager = this;
           var status = this.status;
           this.socket.on('connect', function(socket) {
