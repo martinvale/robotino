@@ -2,125 +2,196 @@
 <html>
     <head>
         <title>Robot controller</title>
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-			integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
-			crossorigin="anonymous">
-		<script src="https://code.jquery.com/jquery-3.5.1.min.js"
-  			integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
-  			crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+        integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+        integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I="
+        crossorigin="anonymous"></script>
 
-		<script type="text/javascript">
+    <style>
+      video {
+        width: 700px;
+        height: 500px;
+      }
+    </style>
 
-			function ConnectionManager(connectionForm) {
-		 		this.server = $(".js-server", connectionForm);
-		 		this.status = $(".js-status", connectionForm);
-			}
+    <script type="text/javascript">
 
-			ConnectionManager.prototype = {
-				constructor: ConnectionManager,
-				connect: function() {
-		            this.ws = new WebSocket("ws://" + this.server.val() + "/control");
-		            var status = this.status;
-		            this.ws.onopen = function (event) {
-		            	status.text('Connected!')
-					};
-					this.ws.onerror = function(event) {
-						console.error("Error en el WebSocket detectado:", event);
-					};
-		            this.ws.onmessage = function (event) {
-		            	console.log(event.data);
-		            };
-				},
-				send: function(command) {
-					this.ws.send(command);
-				}
-			}
+      function ConnectionManager(connectionForm, document, video) {
+        this.server = $(".js-server", connectionForm);
+        this.status = $(".js-status", connectionForm);
+        this.video = document.querySelector("video");
+        this.video2 = video;
+      }
 
-			function RemoteController(controller, connectionManager) {
+      ConnectionManager.prototype = {
+        constructor: ConnectionManager,
+        connect: function() {
+          /*this.ws = new WebSocket("ws://" + this.server.val() + "/remote");
+          var status = this.status;
+          this.ws.onopen = function (event) {
+            status.text('Connected!')
+          };
+          this.ws.onerror = function(event) {
+            console.error("Error en el WebSocket detectado:", event);
+          };
+          this.ws.onmessage = function (event) {
+            console.log(event.data);
+          };*/
 
-			 	this.forwardButton = $(".js-forward", controller)
-			 	this.forwardButton.click(function (event) {
-	            	connectionManager.send('U')
-			 	})
-			 	this.leftButton = $(".js-left", controller)
-			 	this.leftButton.click(function (event) {
-	            	connectionManager.send('L')
-			 	})
-			 	this.rightButton = $(".js-right", controller)
-			 	this.rightButton.click(function (event) {
-	            	connectionManager.send('R')
-			 	})
-			 	this.backwardButton = $(".js-backward", controller)
-			 	this.backwardButton.click(function (event) {
-	            	connectionManager.send('D')
-			 	})
+          let peerConnection;
+          const config = {
+            iceServers: [
+                { 
+                  "urls": "stun:stun.l.google.com:19302",
+                }
+            ]
+          };
 
-			}
-			RemoteController.prototype = {
-				constructor: RemoteController,
-				enable: function() {
-					console.log('Enabled');
-				},
-				disable: function() {
-					console.log('Disabled');
-				}
-			}
+          this.socket = io();
+          var manager = this;
+          var status = this.status;
+          this.socket.on('connect', function(socket) {
+            status.text('Connected!');
+            manager.socket.emit("watcher");
+          });
+          this.socket.on("offer", (id, description) => {
+            peerConnection = new RTCPeerConnection(config);
+            peerConnection
+              .setRemoteDescription(description)
+              .then(() => peerConnection.createAnswer())
+              .then(sdp => peerConnection.setLocalDescription(sdp))
+              .then(() => {
+                manager.socket.emit("answer", id, peerConnection.localDescription);
+              });
+            peerConnection.ontrack = event => {
+              manager.video.srcObject = event.streams[0];
+            };
+            peerConnection.onicecandidate = event => {
+              if (event.candidate) {
+                manager.socket.emit("candidate", id, event.candidate);
+              }
+            };
+          });
+          this.socket.on("candidate", (id, candidate) => {
+            peerConnection
+              .addIceCandidate(new RTCIceCandidate(candidate))
+              .catch(e => console.error(e));
+          });
+          this.socket.on("broadcaster", () => {
+            manager.socket.emit("watcher");
+          });
+          this.socket.on("disconnectPeer", () => {
+            peerConnection.close();
+          });
 
-			$( document ).ready(function() {
-			 
-			 	var connectionManager = new ConnectionManager($(".js-connection-form"));
-			 
-			 	$(".js-connect").click(function (event) {
-			 		connectionManager.connect();
-			 	})
+        },
+        disconnect: function() {
+          this.socket.close();
+          this.status.text('Connected!');
+        },
+        send: function(command) {
+          //this.ws.send(command);
+          this.socket.emit('command request', command);
+        }
+      }
 
-			 	var remoteController = new RemoteController($(".js-controller"), connectionManager);
-			});
+      function RemoteController(controller, connectionManager) {
 
-		</script>
+        this.forwardButton = $(".js-forward", controller)
+        this.forwardButton.click(function (event) {
+          connectionManager.send('U')
+        })
+        this.leftButton = $(".js-left", controller)
+        this.leftButton.click(function (event) {
+           connectionManager.send('L')
+        })
+        this.rightButton = $(".js-right", controller)
+        this.rightButton.click(function (event) {
+           connectionManager.send('R')
+        })
+        this.backwardButton = $(".js-backward", controller)
+        this.backwardButton.click(function (event) {
+           connectionManager.send('D')
+        })
+
+      }
+      RemoteController.prototype = {
+        constructor: RemoteController,
+        enable: function() {
+          console.log('Enabled');
+        },
+        disable: function() {
+          console.log('Disabled');
+        }
+      }
+
+      $( document ).ready(function() {
+       
+         var connectionManager = new ConnectionManager($(".js-connection-form"), document, $("#screen"));
+
+         $(".js-connect").click(function (event) {
+           connectionManager.connect();
+         })
+         
+         $(window).on('beforeunload', function() {
+           connectionManager.disconnect();
+         })
+
+         var remoteController = new RemoteController($(".js-controller"), connectionManager);
+      });
+
+    </script>
     </head>
     <body>
-    	<div class="container border">
-	    	<form action="#" class="m-3 js-connection-form">
-	    		<div class="form-group">
-				   	<label for="server">Servidor</label>
-				    <input type="text" class="form-control js-server" name="server" id="server" value="192.168.0.3">
-				</div>
-				<button type="button" class="btn btn-primary js-connect">Conectar</button>
-				<div class="alert alert-info mt-3 js-status" role="alert">Desconectado</div>
-	    	</form>
-    	</div>
-    	<div class="container border mt-3">
-	    	<div class="container mx-auto my-3 w-50 js-controller">
-				<div class="row">
-			   		<div class="col-sm">
-			    	</div>
-			    	<div class="col-sm">
-						<button type="button" class="btn btn-dark btn-lg js-forward">Avanzar</button>
-			    	</div>
-			    	<div class="col-sm">
-			    	</div>
-			  	</div>
-				<div class="row">
-			   		<div class="col-sm">
-						<button type="button" class="btn btn-dark btn-lg js-left">Izquierda</button>
-			    	</div>
-			    	<div class="col-sm">
-			    	</div>
-			    	<div class="col-sm">
-						<button type="button" class="btn btn-dark btn-lg js-right">Derecha</button>
-			    	</div>
-			  	</div>
-				<div class="row">
-			   		<div class="col-sm">
-			    	</div>
-			    	<div class="col-sm">
-						<button type="button" class="btn btn-dark btn-lg js-backward">Retroceder</button>
-			    	</div>
-			    	<div class="col-sm">
-			    	</div>
-			  	</div>
-			</div>
-		</div>
+      <div class="container border">
+        <form action="#" class="m-3 js-connection-form">
+          <div class="form-group">
+             <label for="server">Servidor</label>
+            <input type="text" class="form-control js-server" name="server" id="server" value="192.168.0.3">
+        </div>
+        <button type="button" class="btn btn-primary js-connect">Conectar</button>
+        <div class="alert alert-info mt-3 js-status" role="alert">Desconectado</div>
+        </form>
+      </div>
+      <div class="container">
+        <video id="screen" playsinline autoplay muted></video>
+      </div>
+      <div class="container border mt-3">
+        <div class="container mx-auto my-3 w-50 js-controller">
+        <div class="row">
+             <div class="col-sm">
+            </div>
+            <div class="col-sm">
+            <button type="button" class="btn btn-dark btn-lg js-forward">Avanzar</button>
+            </div>
+            <div class="col-sm">
+            </div>
+          </div>
+        <div class="row">
+             <div class="col-sm">
+            <button type="button" class="btn btn-dark btn-lg js-left">Izquierda</button>
+            </div>
+            <div class="col-sm">
+            </div>
+            <div class="col-sm">
+            <button type="button" class="btn btn-dark btn-lg js-right">Derecha</button>
+            </div>
+          </div>
+        <div class="row">
+             <div class="col-sm">
+            </div>
+            <div class="col-sm">
+            <button type="button" class="btn btn-dark btn-lg js-backward">Retroceder</button>
+            </div>
+            <div class="col-sm">
+            </div>
+          </div>
+      </div>
+    </div>
     </body>
 </html>

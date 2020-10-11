@@ -40,3 +40,13 @@ def about():
 def sample():
     """Renders the contact page."""
     return render_template('remote.html')
+
+@app.route('/broadcaster')
+def broadcaster():
+    """Renders the contact page."""
+    return render_template('broadcaster.html')
+
+@app.route('/client')
+def client():
+    """Renders the contact page."""
+    return render_template('client.html')
