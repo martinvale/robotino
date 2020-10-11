@@ -1,1 +1,1 @@
-web: gunicorn -k flask_sockets.worker robotinomanager:app
+web: gunicorn -k socketio.sgunicorn.GeventSocketIOWorker robotinomanager:app
