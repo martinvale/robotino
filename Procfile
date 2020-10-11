@@ -1,1 +1,1 @@
-web: gunicorn -k socketio.sgunicorn.GeventSocketIOWorker robotinomanager:app
+web: gunicorn --worker-class eventlet -w 1 robotinomanager:app
