@@ -52,7 +52,7 @@
             ]
           };
 
-          this.socket = io("http://" + document.domain + ":" + location.port);
+          this.socket = io("http://" + document.domain);
           var manager = this;
           var status = this.status;
           this.socket.on('connect', function(socket) {
